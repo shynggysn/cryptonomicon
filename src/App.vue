@@ -1,29 +1,5 @@
 <template>
   <div class="container mx-auto flex flex-col items-center bg-gray-100 p-4">
-    <!-- <div
-      class="fixed w-100 h-100 opacity-80 bg-purple-800 inset-0 z-50 flex items-center justify-center"
-    >
-      <svg
-        class="animate-spin -ml-1 mr-3 h-12 w-12 text-white"
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <circle
-          class="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          stroke-width="4"
-        ></circle>
-        <path
-          class="opacity-75"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        ></path>
-      </svg>
-    </div> -->
     <div class="container">
       <section>
         <div class="flex">
@@ -96,6 +72,10 @@
           <div
             v-for="t in tickers"
             :key="t.name"
+            @click="sel = t"
+            :class="{
+              'border-4': sel == t
+            }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
@@ -108,7 +88,7 @@
             </div>
             <div class="w-full border-t border-gray-200"></div>
             <button
-              @click="handleDelete(t)"
+              @click.stop="handleDelete(t)"
               class="flex items-center justify-center font-medium w-full bg-gray-100 px-4 py-4 sm:px-6 text-md text-gray-500 hover:text-gray-600 hover:bg-gray-200 hover:opacity-20 transition-all focus:outline-none"
             >
               <svg
@@ -122,17 +102,18 @@
                   fill-rule="evenodd"
                   d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
                   clip-rule="evenodd"
-                ></path></svg
-              >Удалить
+                ></path>
+              </svg>
+              Удалить
             </button>
           </div>
         </dl>
         <hr class="w-full border-t border-gray-600 my-4" />
       </template>
 
-      <!-- <section class="relative">
+      <section v-if="sel" class="relative">
         <h3 class="text-lg leading-6 font-medium text-gray-900 my-8">
-          VUE - USD
+          {{ sel.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div class="bg-purple-800 border w-10 h-24"></div>
@@ -140,7 +121,11 @@
           <div class="bg-purple-800 border w-10 h-48"></div>
           <div class="bg-purple-800 border w-10 h-16"></div>
         </div>
-        <button type="button" class="absolute top-0 right-0">
+        <button
+          @click="sel = null"
+          type="button"
+          class="absolute top-0 right-0"
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
             xmlns:xlink="http://www.w3.org/1999/xlink"
@@ -163,7 +148,7 @@
             </g>
           </svg>
         </button>
-      </section> -->
+      </section>
     </div>
   </div>
 </template>
@@ -173,12 +158,9 @@ export default {
   name: "App",
   data() {
     return {
-      ticker: "default",
-      tickers: [
-        { name: "name1", price: "-" },
-        { name: "name2", price: "-" },
-        { name: "name3", price: "-" }
-      ]
+      ticker: "",
+      tickers: [],
+      sel: null
     };
   },
   methods: {
@@ -189,10 +171,23 @@ export default {
       };
 
       this.tickers.push(ticker);
+
+      setInterval(async () => {
+        const f = await fetch(`
+        https://min-api.cryptocompare.com/data/price?fsym=${ticker.name}&tsyms=USD&api_key=bd068d7121f835c03da37f5cac2bf24ccfde4954fd42dd0ded7c2cf5c16848f7`);
+
+        const data = await f.json();
+        console.log(data.USD);
+        this.tickers.find((t) => t.name == ticker.name).price = data.USD;
+      }, 3000);
+
       this.ticker = "";
     },
     handleDelete(ticker) {
       this.tickers = this.tickers.filter((t) => t != ticker);
+      if (this.sel == ticker) {
+        this.sel = null;
+      }
     }
   }
 };
