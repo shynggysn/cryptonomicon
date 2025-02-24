@@ -116,10 +116,11 @@
           {{ sel.name }} - USD
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
-          <div class="bg-purple-800 border w-10 h-24"></div>
-          <div class="bg-purple-800 border w-10 h-32"></div>
-          <div class="bg-purple-800 border w-10 h-48"></div>
-          <div class="bg-purple-800 border w-10 h-16"></div>
+          <div
+            v-for="(bar, idx) in graph"
+            :key="idx"
+            class="bg-purple-800 border w-10 h-24"
+          ></div>
         </div>
         <button
           @click="sel = null"
@@ -160,7 +161,8 @@ export default {
     return {
       ticker: "",
       tickers: [],
-      sel: null
+      sel: null,
+      graph: []
     };
   },
   methods: {
@@ -177,12 +179,16 @@ export default {
         https://min-api.cryptocompare.com/data/price?fsym=${ticker.name}&tsyms=USD&api_key=bd068d7121f835c03da37f5cac2bf24ccfde4954fd42dd0ded7c2cf5c16848f7`);
 
         const data = await f.json();
-        console.log(data.USD);
-        this.tickers.find((t) => t.name == ticker.name).price = data.USD;
+        this.tickers.find((t) => t.name == ticker.name).price =
+          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
+        if (this.sel.name == ticker.name) {
+          this.graph.push(data.USD);
+        }
       }, 3000);
 
       this.ticker = "";
     },
+
     handleDelete(ticker) {
       this.tickers = this.tickers.filter((t) => t != ticker);
       if (this.sel == ticker) {
