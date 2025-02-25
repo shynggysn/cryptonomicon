@@ -72,7 +72,7 @@
           <div
             v-for="t in tickers"
             :key="t.name"
-            @click="sel = t"
+            @click="select(t)"
             :class="{
               'border-4': sel == t
             }"
@@ -117,8 +117,9 @@
         </h3>
         <div class="flex items-end border-gray-600 border-b border-l h-64">
           <div
-            v-for="(bar, idx) in graph"
+            v-for="(bar, idx) in normalizeGraph()"
             :key="idx"
+            :style="{ height: `${bar}%` }"
             class="bg-purple-800 border w-10 h-24"
           ></div>
         </div>
@@ -179,9 +180,13 @@ export default {
         https://min-api.cryptocompare.com/data/price?fsym=${ticker.name}&tsyms=USD&api_key=bd068d7121f835c03da37f5cac2bf24ccfde4954fd42dd0ded7c2cf5c16848f7`);
 
         const data = await f.json();
-        this.tickers.find((t) => t.name == ticker.name).price =
+
+        let addedItem = this.tickers.at(this.tickers.length - 1);
+
+        addedItem.price =
           data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-        if (this.sel.name == ticker.name) {
+
+        if (this.sel?.name == ticker.name) {
           this.graph.push(data.USD);
         }
       }, 3000);
@@ -189,11 +194,29 @@ export default {
       this.ticker = "";
     },
 
+    select(ticker) {
+      this.sel = ticker;
+      this.graph = [];
+    },
+
     handleDelete(ticker) {
       this.tickers = this.tickers.filter((t) => t != ticker);
       if (this.sel == ticker) {
         this.sel = null;
       }
+    },
+
+    normalizeGraph() {
+      const maxValue = Math.max(...this.graph);
+      const minValue = Math.min(...this.graph);
+
+      if (maxValue === minValue) {
+        return this.graph.map(() => 5);
+      }
+
+      return this.graph.map(
+        (price) => 5 + ((price - minValue) * 95) / (maxValue - minValue)
+      );
     }
   }
 };
