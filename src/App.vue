@@ -94,13 +94,14 @@
             :key="t.name"
             @click="select(t)"
             :class="{
-              'border-4': selectedTicker == t
+              'border-4': selectedTicker == t,
+              'bg-red-100': t.price === '-'
             }"
             class="bg-white overflow-hidden shadow rounded-lg border-purple-800 border-solid cursor-pointer"
           >
             <div class="px-4 py-5 sm:p-6 text-center">
               <dt class="text-sm font-medium text-gray-500 truncate">
-                {{ t.name }}
+                {{ t.name }} - USD
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
                 {{ formatPrice(t.price) }}
@@ -191,7 +192,12 @@
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
 
-import { subscribeToTicker, unsubscribeFromTicker } from "./api";
+import {
+  subscribeToTicker,
+  unsubscribeFromTicker,
+  subscribeToTickerToBTC,
+  unsubscribeFromTickerToBTC
+} from "./api";
 
 export default {
   name: "App",
@@ -283,7 +289,27 @@ export default {
 
   methods: {
     updateTicker(tickerName, price) {
-      console.log(price);
+      if (price === "NO_PRICE") {
+        this.tickers
+          .filter((t) => t.name === tickerName)
+          .forEach((t) => {
+            unsubscribeFromTicker(t.name);
+            subscribeToTickerToBTC(t.name, (newPrice) =>
+              this.updateTicker(tickerName, newPrice)
+            );
+          });
+        return;
+      }
+
+      if (price === "NO_PRICE_WHEN_TO_BTC") {
+        this.tickers
+          .filter((t) => t.name === tickerName)
+          .forEach((t) => {
+            unsubscribeFromTickerToBTC(t.name);
+          });
+        return;
+      }
+
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
@@ -328,6 +354,7 @@ export default {
 
       this.tickers = [...this.tickers, currentTicker];
       this.filter = "";
+      this.ticker = "";
       subscribeToTicker(currentTicker.name, (newPrice) =>
         this.updateTicker(currentTicker.name, newPrice)
       );
