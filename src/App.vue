@@ -287,6 +287,9 @@ export default {
       this.tickers
         .filter((t) => t.name === tickerName)
         .forEach((t) => {
+          if (t === this.selectedTicker) {
+            this.graph.push(price);
+          }
           t.price = price;
         });
     },
@@ -354,6 +357,10 @@ export default {
 
     ticker() {
       this.tickerAlreadyExists = false;
+    },
+
+    paginatedTickers() {
+      if (this.paginatedTickers.length == 0 && this.page > 1) this.page -= 1;
     },
 
     filter() {
