@@ -103,7 +103,7 @@
                 {{ t.name }}
               </dt>
               <dd class="mt-1 text-3xl font-semibold text-gray-900">
-                {{ t.price }}
+                {{ formatPrice(t.price) }}
               </dd>
             </div>
             <div class="w-full border-t border-gray-200"></div>
@@ -176,11 +176,9 @@
 </template>
 
 <script>
-// H - homework - домашнее задание
-
 // [x] 6. Наличие в состоянии ЗАВИСИМЫХ ДАННЫХ | Критичность: 5+
 // [ ] 4. Запросы напрямую внутри компонента (???) | Критичность: 5
-// [x] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
+// [ ] 2. При удалении остается подписка на загрузку тикера | Критичность: 5
 // [ ] 5. Обработка ошибок API | Критичность: 5
 // [ ] 3. Количество запросов | Критичность: 4
 // [x] 8. При удалении тикера не изменяется localStorage | Критичность: 4
@@ -192,6 +190,8 @@
 // Параллельно
 // [x] График сломан если везде одинаковые значения
 // [x] При удалении тикера остается выбор
+
+import { subscribeToTicker, unsubscribeFromTicker } from "./api";
 
 export default {
   name: "App",
@@ -216,17 +216,21 @@ export default {
     const windowData = Object.fromEntries(
       new URL(window.location).searchParams.entries()
     );
-    if (windowData.filter) {
-      this.filter = windowData.filter;
-    }
-    if (windowData.page) {
-      this.page = parseInt(windowData.page, 10);
-    }
+
+    const VALID_KEYS = ["filter", "page"];
+
+    VALID_KEYS.forEach((key) => {
+      this[key] = windowData[key];
+    });
+
     const tickersData = localStorage.getItem("cryptonomicon-list");
+
     if (tickersData) {
       this.tickers = JSON.parse(tickersData);
-      this.tickers.forEach((t) => {
-        this.subscribeToUpdates(t.name);
+      this.tickers.forEach((ticker) => {
+        subscribeToTicker(ticker.name, (newPrice) =>
+          this.updateTicker(ticker.name, newPrice)
+        );
       });
     }
   },
@@ -278,24 +282,18 @@ export default {
   },
 
   methods: {
-    subscribeToUpdates(tickerName) {
-      const intervalId = setInterval(async () => {
-        const f = await fetch(`
-        https://min-api.cryptocompare.com/data/price?fsym=${tickerName}&tsyms=USD&api_key=bd068d7121f835c03da37f5cac2bf24ccfde4954fd42dd0ded7c2cf5c16848f7`);
+    updateTicker(tickerName, price) {
+      console.log(price);
+      this.tickers
+        .filter((t) => t.name === tickerName)
+        .forEach((t) => {
+          t.price = price;
+        });
+    },
 
-        const data = await f.json();
-        let ticker = this.tickers.find((t) => t.name === tickerName);
-        if (!data.USD || !ticker) {
-          clearInterval(intervalId);
-          return;
-        }
-        ticker.price =
-          data.USD > 1 ? data.USD.toFixed(2) : data.USD.toPrecision(2);
-
-        if (this.selectedTicker?.name == tickerName) {
-          this.graph.push(data.USD);
-        }
-      }, 100000);
+    formatPrice(price) {
+      if (price == "-") return price;
+      return price > 1 ? price.toFixed(2) : price.toPrecision(2);
     },
 
     async fetchData() {
@@ -327,8 +325,9 @@ export default {
 
       this.tickers = [...this.tickers, currentTicker];
       this.filter = "";
-
-      this.subscribeToUpdates(currentTicker.name);
+      subscribeToTicker(currentTicker.name, (newPrice) =>
+        this.updateTicker(currentTicker.name, newPrice)
+      );
     },
 
     select(ticker) {
@@ -340,6 +339,7 @@ export default {
       if (this.selectedTicker == ticker) {
         this.selectedTicker = null;
       }
+      unsubscribeFromTicker(ticker.name);
     }
   },
   watch: {
